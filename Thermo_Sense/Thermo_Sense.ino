@@ -23,7 +23,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define SMTP_PORT 465
 #define AUTHOR_EMAIL "seniordesignsebshivjohnlogan@gmail.com"
 #define AUTHOR_PASSWORD "ymgw lmeh tcho qqhy"
-#define RECIPIENT_EMAIL "spatel9603@gmail.com"
+#define RECIPIENT_EMAIL "spddimensions@gmail.com"
 
 SMTPSession smtp;
 ESP_Mail_Session configMail;
@@ -47,7 +47,7 @@ int numberOfDevices; // Number of temperature devices found
 DeviceAddress tempDeviceAddress; // Current device address
 
 
-//---DELETE
+//To be Deleted
 struct Button {
   const uint8_t PIN;
   uint32_t numberKeyPresses;
@@ -60,17 +60,16 @@ void IRAM_ATTR isr() {
   button1.numberKeyPresses++;
   button1.pressed = true;
 }
-//----DELETE
+//To be Deleted
 
 
 void setup() {
   Serial.begin(115200);
 
-  Serial.begin(115200);
-  pinMode(button1.PIN, INPUT_PULLUP);
-  attachInterrupt(button1.PIN, isr, FALLING);
+  pinMode(button1.PIN, INPUT_PULLUP); //To be Deleted
+  attachInterrupt(button1.PIN, isr, FALLING); //To be Deleted
 
-  tempSensorSetup();
+  tempSensorSetup(); // Sets up the temperature sensors
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to Wi-FI");
@@ -175,7 +174,8 @@ void loop() {
 
 void sendToFirebase(String path, float value) {
   if (Firebase.RTDB.setFloat(&fbdo, path, value)) {
-      Serial.println(); Serial.print(value);
+      Serial.println(); 
+      Serial.print(value);
       Serial.print("- successfully saved to: " + fbdo.dataPath());
       Serial.println(" (" + fbdo.dataType() + ")");
     }
@@ -184,7 +184,7 @@ void sendToFirebase(String path, float value) {
     }
 }
 
-
+/* To be Deleted
 // function to print a device address
 void printAddress(DeviceAddress deviceAddress) {
   for (uint8_t i = 0; i < 8; i++){
@@ -192,6 +192,8 @@ void printAddress(DeviceAddress deviceAddress) {
       Serial.print(deviceAddress[i], HEX);
   }
 }
+// To be Deleted
+*/
 
 void mailSetup() {
   /*  Set the network reconnection option */
@@ -287,51 +289,64 @@ void smtpCallback(SMTP_Status status){
   }
 }
 
+// Sets up the two DS18B20 temperature sensors
 void tempSensorSetup() {
-  sensors.begin();
+  sensors.begin(); // Initializing communication with the sensor on the OneWire bus
 
-  // Grab a count of devices on the wire
-  numberOfDevices = sensors.getDeviceCount();
+  numberOfDevices = sensors.getDeviceCount(); // Grabbing a count of devices on the wire
   
-  // locate devices on the bus
-  Serial.print("Locating devices...");
-  Serial.print("Found ");
   Serial.print(numberOfDevices, DEC);
-  Serial.println(" devices.");
-
+  Serial.println(" devices have been found");
+  /* To be Deleted
   // Loop through each device, print out address
-  for(int i=0;i<numberOfDevices; i++){
+  for(int i=0; i < numberOfDevices; i++) {
     // Search the wire for address
-    if(sensors.getAddress(tempDeviceAddress, i)){
+    if(sensors.getAddress(tempDeviceAddress, i)) {
       Serial.print("Found device ");
       Serial.print(i, DEC);
       Serial.print(" with address: ");
       printAddress(tempDeviceAddress);
       Serial.println();
-    } else {
+    } 
+    else {
       Serial.print("Found ghost device at ");
       Serial.print(i, DEC);
       Serial.print(" but could not detect address. Check power and cabling");
     }
   }
+  // To be Deleted
+  */ 
 }
-
+///////////////////////////////////////////////////////////////////////////////////////
+// Method : readingDisplaySetup()
+// Sets up the template for the oled display, template can be found below
+// Title - "Readings"
+// Line 1 for Sensor 1 - "S1" + temperatureS1 + "C"
+// Line 1 for Sensor 2 - "S2" + temperatureS2 + "C"
+// Functionality to potential add: Add degrees sign before the "C"
+///////////////////////////////////////////////////////////////////////////////////////
 void readingDisplaySetup() {
-  display.setTextSize(2);      
-  display.setTextColor(SSD1306_WHITE); 
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  // Writes "Readings" for for the title to the display
   display.setCursor(18, 0);    
   display.print("Readings");
+  // Writes "S1" for sensor 1 to the display
   display.setCursor(0,20);
   display.print("S1:");
+  // Writes "C" to be display after the temperature for sensor 1
   display.setCursor(110,20);
   display.print("C");
+  // Writes "S2" for sensor 2 to the display
   display.setCursor(0,42);
   display.print("S2:");
+  // Writes "C" to be display after the temperature for sensor 2
   display.setCursor(110,42);
   display.print("C");
-  display.display();
+  display.display(); // Display to the screen
 }
 
+// 
 void sensorOneDisplay(float temp) {
   clearSensorOneTempC();
   display.setTextSize(2);     
