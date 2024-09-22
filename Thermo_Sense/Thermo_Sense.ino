@@ -1,3 +1,5 @@
+#include <Arduino.h>
+#include <Hashtable.h> 
 #include<WiFi.h>
 #include<Firebase_ESP_Client.h>
 #include "addons/TokenHelper.h"
@@ -46,6 +48,21 @@ DallasTemperature sensors(&oneWire); // Passing oneWire reference to Dallas Temp
 int numberOfDevices; // Number of temperature devices found
 DeviceAddress tempDeviceAddress; // Current device address
 
+//float minTempLimitSensorOne; // Minimum temperature limit of sensor one
+//float maxTempLimitSensorOne; // Maximum temperature limit of sensor one
+//float minTempLimitSensorTwo; // Minimum temperature limit of sensor two
+//float maxTempLimitSensorTwo; // Maximum temperature limit of sensor two
+/*
+Hashtable<String, float> tempThresholds;
+tempThresholds.put("Threshold/Sensor_One/Min/Celsius", 50.0);
+tempThresholds.put("Threshold/Sensor_One/Min/Fahrenheit", 122.0);
+tempThresholds.put("Threshold/Sensor_One/Max/Celsius", 50.0);
+tempThresholds.put("Threshold/Sensor_One/Max/Fahrenheit", 122.0);
+tempThresholds.put("Threshold/Sensor_Two/Min/Celsius", 50.0);
+tempThresholds.put("Threshold/Sensor_Two/Min/Fahrenheit", 122.0);
+tempThresholds.put("Threshold/Sensor_Two/Max/Celsius", 50.0);
+tempThresholds.put("Threshold/Sensor_Two/Max/Fahrenheit", 122.0);
+*/
 
 //To be Deleted
 struct Button {
@@ -125,9 +142,9 @@ void loop() {
   float tempFSensorTwo;
 
   // Loop through each device, print out temperature data
-  for(int i=0;i<numberOfDevices; i++){
+  for (int i=0;i<numberOfDevices; i++) {
     // Search the wire for address
-    if(sensors.getAddress(tempDeviceAddress, i)){
+    if (sensors.getAddress(tempDeviceAddress, i)) {
       sensors.setResolution(tempDeviceAddress, 12);
       // Output the device ID
       Serial.print("Temperature for device: ");
@@ -161,13 +178,15 @@ void loop() {
   //delay(1000);
   sensorOneDisplay(tempCSensorOne);
   sensorTwoDisplay(tempCSensorTwo);
-  
+
+  readFromFirebaseFloat("Threshold/Sensor_One/Max/Celsius", tempCSensorOne, tempCSensorTwo);
+  /*
   if (button1.pressed) {
     Serial.printf("Button has been pressed %u times\n", button1.numberKeyPresses);
     button1.pressed = false;
     sendEmail();
   }
-  
+  */
   
 
 }
@@ -178,10 +197,44 @@ void sendToFirebase(String path, float value) {
       Serial.print(value);
       Serial.print("- successfully saved to: " + fbdo.dataPath());
       Serial.println(" (" + fbdo.dataType() + ")");
-    }
-    else {
-      Serial.println("FAILED: " + fbdo.errorReason());
-    }
+  }
+  else {
+    Serial.println("FAILED: " + fbdo.errorReason());
+  }
+}
+
+void readFromFirebaseFloat(String path, float currentOneC, float currentTwoC) {
+  if (Firebase.RTDB.getFloat(&fbdo, path)) {
+      if (fbdo.dataType() == "float") {
+        if ((path == "Threshold/Sensor_One/Min/Celsius")) {
+          lessThanThreshold(currentOneC, fbdo.floatData());
+        }
+        else if ((path == "Threshold/Sensor_One/Max/Celsius")) {
+          greaterThanThreshold(currentOneC, fbdo.floatData());
+        }
+        else if ((path == "Threshold/Sensor_Two/Min/Celsius")) {
+          lessThanThreshold(currentTwoC, fbdo.floatData());
+        }
+        else if ((path == "Threshold/Sensor_Two/Max/Celsius")) {
+          greaterThanThreshold(currentTwoC, fbdo.floatData());
+        }
+      }
+  }
+  else {
+    Serial.println("FAILED: " + fbdo.errorReason());
+  }
+}
+
+void lessThanThreshold(float currentC, float threshold) {
+  if (currentC < threshold) {
+    sendEmail();
+  }
+}
+
+void greaterThanThreshold(float currentC, float threshold) {
+  if (currentC > threshold) {
+    sendEmail();
+  }
 }
 
 /* To be Deleted
@@ -232,6 +285,7 @@ void mailSetup() {
 }
 
 void sendEmail(){
+  Serial.println("Got to sendEmail()");
   /* Declare the message class */
   SMTP_Message message;
 
