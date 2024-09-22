@@ -14,60 +14,40 @@
 #define WIFI_PASSWORD "UI-DeviceNet"
 #define API_KEY "AIzaSyA6e2_8HoCuZyHfXt_HToq3FBO1MH2jUBE"
 #define DATABASE_URL "https://thermostat-ed3d4-default-rtdb.firebaseio.com/"
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-#define OLED_RESET -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-#define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
+#define SCREEN_WIDTH 128 
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+#define SCREEN_ADDRESS 0x3C
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
-/** The smtp host name e.g. smtp.gmail.com for GMail or smtp.office365.com for Outlook or smtp.mail.yahoo.com */
 #define SMTP_HOST "smtp.gmail.com"
 #define SMTP_PORT 465
-
-/* The sign in credentials */
 #define AUTHOR_EMAIL "seniordesignsebshivjohnlogan@gmail.com"
 #define AUTHOR_PASSWORD "ymgw lmeh tcho qqhy"
-
-/* Recipient's email*/
 #define RECIPIENT_EMAIL "spatel9603@gmail.com"
 
-/* Declare the global used SMTPSession object for SMTP transport */
 SMTPSession smtp;
-
-/* Declare the Session_Config for user defined session credentials */
 ESP_Mail_Session configMail;
-
-/* Callback function to get the Email sending status */
-void smtpCallback(SMTP_Status status);
-
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
-unsigned long sendDataPrevMillis = 0;
-bool signupOK = false;
+void smtpCallback(SMTP_Status status); // Callback function to get the Email sending status
 
+
+bool signupOK = false;
 int powerStatus = 1;
 float prevTempOneC = 0;
 float prevTempTwoC = 0;
 
-// GPIO where the DS18B20 is connected to
-const int oneWireBus = 4;     
+const int oneWireBus = 4; // GPIO pin for the DS18B20 sensor 
 
-// Setup a oneWire instance to communicate with any OneWire devices
-OneWire oneWire(oneWireBus);
-
-// Pass our oneWire reference to Dallas Temperature sensor 
-DallasTemperature sensors(&oneWire);
-
-// Number of temperature devices found
-int numberOfDevices;
-
-// We'll use this variable to store a found device address
-DeviceAddress tempDeviceAddress;
+OneWire oneWire(oneWireBus); // Setting up a oneWire instance to communicate with any OneWire devices
+DallasTemperature sensors(&oneWire); // Passing oneWire reference to Dallas Temperature sensor 
+int numberOfDevices; // Number of temperature devices found
+DeviceAddress tempDeviceAddress; // Current device address
 
 
-//---
+//---DELETE
 struct Button {
   const uint8_t PIN;
   uint32_t numberKeyPresses;
@@ -80,7 +60,7 @@ void IRAM_ATTR isr() {
   button1.numberKeyPresses++;
   button1.pressed = true;
 }
-//----
+//----DELETE
 
 
 void setup() {
@@ -173,8 +153,6 @@ void loop() {
   }
 
   if (Firebase.ready() && signupOK) {
-    //&& (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)
-    //sendDataPrevMillis = millis();
     sendToFirebase("Temp/Sensor_One/Celsius", tempCSensorOne);
     sendToFirebase("Temp/Sensor_One/Fahrenheit", tempFSensorOne);
     sendToFirebase("Temp/Sensor_Two/Celsius", tempCSensorTwo);
@@ -283,32 +261,21 @@ void sendEmail(){
   }
  
 }
-/* Callback function to get the Email sending status */
+
+
+// Callback function to get the Email sending status
 void smtpCallback(SMTP_Status status){
-  /* Print the current status */
-  Serial.println(status.info());
+  Serial.println(status.info()); // Printing current status
 
-  /* Print the sending result */
-  if (status.success()){
-    // ESP_MAIL_PRINTF used in the examples is for format printing via debug Serial port
-    // that works for all supported Arduino platform SDKs e.g. AVR, SAMD, ESP32 and ESP8266.
-    // In ESP8266 and ESP32, you can use Serial.printf directly.
-
+  // Print the sending result
+  if (status.success()) {
     Serial.println("----------------");
     ESP_MAIL_PRINTF("Message sent success: %d\n", status.completedCount());
     ESP_MAIL_PRINTF("Message sent failed: %d\n", status.failedCount());
     Serial.println("----------------\n");
 
-    for (size_t i = 0; i < smtp.sendingResult.size(); i++)
-    {
-      /* Get the result item */
-      SMTP_Result result = smtp.sendingResult.getItem(i);
-
-      // In case, ESP32, ESP8266 and SAMD device, the timestamp get from result.timestamp should be valid if
-      // your device time was synched with NTP server.
-      // Other devices may show invalid timestamp as the device time was not set i.e. it will show Jan 1, 1970.
-      // You can call smtp.setSystemTime(xxx) to set device time manually. Where xxx is timestamp (seconds since Jan 1, 1970)
-      
+    for (size_t i = 0; i < smtp.sendingResult.size(); i++) {
+      SMTP_Result result = smtp.sendingResult.getItem(i); // Getting the result item
       ESP_MAIL_PRINTF("Message No: %d\n", i + 1);
       ESP_MAIL_PRINTF("Status: %s\n", result.completed ? "success" : "failed");
       ESP_MAIL_PRINTF("Recipient: %s\n", result.recipients.c_str());
@@ -316,8 +283,7 @@ void smtpCallback(SMTP_Status status){
     }
     Serial.println("----------------\n");
 
-    // You need to clear sending result as the memory usage will grow up.
-    smtp.sendingResult.clear();
+    smtp.sendingResult.clear(); // Clearing the sending result
   }
 }
 
