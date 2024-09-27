@@ -209,12 +209,13 @@ void loop() {
   sensorTwoDisplay(tempCSensorTwo);
 
 
-  //readFromFirebaseFloat("Threshold/Sensor_One/Max/Celsius", tempCSensorOne, tempCSensorTwo);
-
-  // if(test == true) {
-  //   test = false;
-  //   sendEmailAsync();
-  // }
+  readFromFirebaseFloat("Threshold/Sensor_One/Max/Celsius", tempCSensorOne, tempCSensorTwo);
+  /*
+  if(test == true) {
+    test = false;
+    sendEmailAsync();
+  }
+  */
   /*
   if (button1.pressed) {
     Serial.printf("Button has been pressed %u times\n", button1.numberKeyPresses);
@@ -240,43 +241,59 @@ void sendToFirebase(String path, float value) {
 
 void readFromFirebaseFloat(String path, float currentOneC, float currentTwoC) {
   if (Firebase.RTDB.getFloat(&fbdo, path)) {
-      if (fbdo.dataType() == "float") {
-        if ((path == "Threshold/Sensor_One/Min/Celsius")) {
-          lessThanThreshold(currentOneC, fbdo.floatData(), emailLockMinOne);
-        }
-        else if ((path == "Threshold/Sensor_One/Max/Celsius")) {
-          greaterThanThreshold(currentOneC, fbdo.floatData(), emailLockMaxOne);
-        }
-        else if ((path == "Threshold/Sensor_Two/Min/Celsius")) {
-          lessThanThreshold(currentTwoC, fbdo.floatData(), emailLockMinTwo);
-        }
-        else if ((path == "Threshold/Sensor_Two/Max/Celsius")) {
-          greaterThanThreshold(currentTwoC, fbdo.floatData(), emailLockMaxTwo);
-        }
-      }
+    if (path == "Threshold/Sensor_One/Min/Celsius") {
+      lessThanThreshold(currentOneC, fbdo.floatData(), &emailLockMinOne);
+    }
+    else if (path == "Threshold/Sensor_One/Max/Celsius") {
+      greaterThanThreshold(currentOneC, fbdo.floatData(), &emailLockMaxOne);
+    }
+    else if (path == "Threshold/Sensor_Two/Min/Celsius") {
+      lessThanThreshold(currentTwoC, fbdo.floatData(), &emailLockMinTwo);
+    }
+    else if (path == "Threshold/Sensor_Two/Max/Celsius") {
+      greaterThanThreshold(currentTwoC, fbdo.floatData(), &emailLockMaxTwo);
+    }
+      // if (fbdo.dataType() == "float") {
+      //   if (path == "Threshold/Sensor_One/Min/Celsius")) {
+      //     lessThanThreshold(currentOneC, fbdo.floatData(), &emailLockMinOne);
+      //   }
+      //   else if (path == "Threshold/Sensor_One/Max/Celsius") {
+      //     greaterThanThreshold(currentOneC, fbdo.floatData(), &emailLockMaxOne);
+      //   }
+      //   else if (path == "Threshold/Sensor_Two/Min/Celsius") {
+      //     lessThanThreshold(currentTwoC, fbdo.floatData(), &emailLockMinTwo);
+      //   }
+      //   else if (path == "Threshold/Sensor_Two/Max/Celsius") {
+      //     greaterThanThreshold(currentTwoC, fbdo.floatData(), &emailLockMaxTwo);
+      //   }
+      // }
+      // else {
+      //   Serial.println("Not correct data type on read float");
+      // }
   }
   else {
     Serial.println("FAILED: " + fbdo.errorReason());
   }
 }
 
-void lessThanThreshold(float currentC, float threshold, bool &emailLock) {
-  if (currentC < threshold && !emailLock) {
-    emailLock = true;
+void lessThanThreshold(float currentC, float threshold, bool *emailLock) {
+  if ((currentC < threshold) && (!*emailLock)) {
+    *emailLock = true;
     sendEmailAsync();
   }
   else if (currentC >= threshold) {
-    emailLock = false;
+    *emailLock = false;
   }
 }
 
-void greaterThanThreshold(float currentC, float threshold, bool &emailLock) {
-  if (currentC > threshold && !emailLock) {
-    emailLock = true;
+void greaterThanThreshold(float currentC, float threshold, bool *emailLock) {
+  if ((currentC > threshold) && (!*emailLock)) {
+    *emailLock = true;
     sendEmailAsync();
   }
-  else if (currentC <= threshold) {
-    emailLock = false;
+  else if ((currentC <= threshold) && (*emailLock)) {
+    Serial.println("RESET MAX");
+    *emailLock = false;
   }
 }
 
