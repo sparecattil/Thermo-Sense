@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <Hashtable.h> 
-#include<WiFi.h>
-#include<Firebase_ESP_Client.h>
+#include <WiFi.h>
+#include <Firebase_ESP_Client.h>
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 #include <OneWire.h>
@@ -35,11 +35,23 @@ FirebaseConfig config;
 
 void smtpCallback(SMTP_Status status); // Callback function to get the Email sending status
 
-
+unsigned long sendDataPrevMillis = 0;
 bool signupOK = false;
 int powerStatus = 1;
 float prevTempOneC = 0;
+float prevTempOneF = 0;
 float prevTempTwoC = 0;
+float prevTempTwoF = 0;
+
+bool sensorOneStatus;
+bool sensorTwoStatus;
+
+bool emailLockMinOne = false;
+bool emailLockMaxOne = false;
+bool emailLockMinTwo = false;
+bool emailLockMaxTwo = false;
+TaskHandle_t emailTaskHandle = NULL; // Handle for the email task
+bool test = true;
 
 const int oneWireBus = 4; // GPIO pin for the DS18B20 sensor 
 
@@ -83,8 +95,8 @@ void IRAM_ATTR isr() {
 void setup() {
   Serial.begin(115200);
 
-  pinMode(button1.PIN, INPUT_PULLUP); //To be Deleted
-  attachInterrupt(button1.PIN, isr, FALLING); //To be Deleted
+  //pinMode(button1.PIN, INPUT_PULLUP); //To be Deleted
+  //attachInterrupt(button1.PIN, isr, FALLING); //To be Deleted
 
   tempSensorSetup(); // Sets up the temperature sensors
 
@@ -111,6 +123,7 @@ void setup() {
 
   config.token_status_callback = tokenStatusCallback;
   Firebase.begin(&config, &auth);
+  
   Firebase.reconnectWiFi(true);
 
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
@@ -154,10 +167,12 @@ void loop() {
       float tempF = round(DallasTemperature::toFahrenheit(tempC) * 100.0) / 100.0;
       // Print the data
       if (i == 0) {
+        sensorOneStatus = true;
         tempCSensorOne = tempC;
         tempFSensorOne = tempF;
       }
-      else {
+      else if (i == 1) {
+        sensorTwoStatus = true;
         tempCSensorTwo = tempC;
         tempFSensorTwo = tempF;
       }
@@ -166,20 +181,40 @@ void loop() {
       Serial.print(" Temp F: ");
       Serial.println(tempF);
     }
+    else {
+      if (i == 0) {
+        sensorOneStatus = false;
+      }
+      else if (i == 1) {
+        sensorTwoStatus = false;
+      }
+    }
   }
 
-  if (Firebase.ready() && signupOK) {
-    sendToFirebase("Temp/Sensor_One/Celsius", tempCSensorOne);
-    sendToFirebase("Temp/Sensor_One/Fahrenheit", tempFSensorOne);
-    sendToFirebase("Temp/Sensor_Two/Celsius", tempCSensorTwo);
-    sendToFirebase("Temp/Sensor_Two/Fahrenheit", tempFSensorTwo);
-    sendToFirebase("Power_Status", powerStatus);
+  if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)) {
+    //&& (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)
+    sendDataPrevMillis = millis();
+    if (prevTempOneC != tempCSensorOne) {
+      sendToFirebase("Temp/Sensor_One/Celsius", tempCSensorOne);
+      sendToFirebase("Temp/Sensor_One/Fahrenheit", tempFSensorOne);
+    }
+    if (prevTempTwoC != tempCSensorTwo) {
+      sendToFirebase("Temp/Sensor_Two/Celsius", tempCSensorTwo);
+      sendToFirebase("Temp/Sensor_Two/Fahrenheit", tempFSensorTwo);
+    }
+    //sendToFirebase("Power_Status", powerStatus);
   }
   //delay(1000);
   sensorOneDisplay(tempCSensorOne);
   sensorTwoDisplay(tempCSensorTwo);
 
-  readFromFirebaseFloat("Threshold/Sensor_One/Max/Celsius", tempCSensorOne, tempCSensorTwo);
+
+  //readFromFirebaseFloat("Threshold/Sensor_One/Max/Celsius", tempCSensorOne, tempCSensorTwo);
+
+  // if(test == true) {
+  //   test = false;
+  //   sendEmailAsync();
+  // }
   /*
   if (button1.pressed) {
     Serial.printf("Button has been pressed %u times\n", button1.numberKeyPresses);
@@ -188,7 +223,7 @@ void loop() {
   }
   */
   
-
+  //delay(1000);
 }
 
 void sendToFirebase(String path, float value) {
@@ -207,16 +242,16 @@ void readFromFirebaseFloat(String path, float currentOneC, float currentTwoC) {
   if (Firebase.RTDB.getFloat(&fbdo, path)) {
       if (fbdo.dataType() == "float") {
         if ((path == "Threshold/Sensor_One/Min/Celsius")) {
-          lessThanThreshold(currentOneC, fbdo.floatData());
+          lessThanThreshold(currentOneC, fbdo.floatData(), emailLockMinOne);
         }
         else if ((path == "Threshold/Sensor_One/Max/Celsius")) {
-          greaterThanThreshold(currentOneC, fbdo.floatData());
+          greaterThanThreshold(currentOneC, fbdo.floatData(), emailLockMaxOne);
         }
         else if ((path == "Threshold/Sensor_Two/Min/Celsius")) {
-          lessThanThreshold(currentTwoC, fbdo.floatData());
+          lessThanThreshold(currentTwoC, fbdo.floatData(), emailLockMinTwo);
         }
         else if ((path == "Threshold/Sensor_Two/Max/Celsius")) {
-          greaterThanThreshold(currentTwoC, fbdo.floatData());
+          greaterThanThreshold(currentTwoC, fbdo.floatData(), emailLockMaxTwo);
         }
       }
   }
@@ -225,17 +260,45 @@ void readFromFirebaseFloat(String path, float currentOneC, float currentTwoC) {
   }
 }
 
-void lessThanThreshold(float currentC, float threshold) {
-  if (currentC < threshold) {
-    sendEmail();
+void lessThanThreshold(float currentC, float threshold, bool &emailLock) {
+  if (currentC < threshold && !emailLock) {
+    emailLock = true;
+    sendEmailAsync();
+  }
+  else if (currentC >= threshold) {
+    emailLock = false;
   }
 }
 
-void greaterThanThreshold(float currentC, float threshold) {
-  if (currentC > threshold) {
-    sendEmail();
+void greaterThanThreshold(float currentC, float threshold, bool &emailLock) {
+  if (currentC > threshold && !emailLock) {
+    emailLock = true;
+    sendEmailAsync();
+  }
+  else if (currentC <= threshold) {
+    emailLock = false;
   }
 }
+
+void emailTask(void *param) {
+  sendEmail(); // Call your email function here
+  vTaskDelete(NULL); // Delete the task after email is sent
+}
+
+void sendEmailAsync() {
+  if (emailTaskHandle == NULL) { // Check if task is already running
+    xTaskCreatePinnedToCore(
+      emailTask,      // Task function
+      "Email Task",   // Task name
+      8192,           // Stack size
+      NULL,           // Parameters
+      1,              // Task priority
+      &emailTaskHandle, // Task handle
+      1               // Run on core 1
+    );
+  }
+}
+
 
 /* To be Deleted
 // function to print a device address
