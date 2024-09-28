@@ -51,6 +51,7 @@ bool emailLockMaxOne = false;
 bool emailLockMinTwo = false;
 bool emailLockMaxTwo = false;
 TaskHandle_t emailTaskHandle = NULL; // Handle for the email task
+bool firstEmail = true;
 bool test = true;
 
 const int oneWireBus = 4; // GPIO pin for the DS18B20 sensor 
@@ -59,6 +60,8 @@ OneWire oneWire(oneWireBus); // Setting up a oneWire instance to communicate wit
 DallasTemperature sensors(&oneWire); // Passing oneWire reference to Dallas Temperature sensor 
 int numberOfDevices; // Number of temperature devices found
 DeviceAddress tempDeviceAddress; // Current device address
+DeviceAddress sensorOneAddress;
+DeviceAddress sensorTwoAddress;
 
 //float minTempLimitSensorOne; // Minimum temperature limit of sensor one
 //float maxTempLimitSensorOne; // Maximum temperature limit of sensor one
@@ -154,51 +157,85 @@ void loop() {
   float tempCSensorTwo;
   float tempFSensorTwo;
 
-  // Loop through each device, print out temperature data
-  for (int i=0;i<numberOfDevices; i++) {
-    // Search the wire for address
-    if (sensors.getAddress(tempDeviceAddress, i)) {
-      sensors.setResolution(tempDeviceAddress, 12);
-      // Output the device ID
-      Serial.print("Temperature for device: ");
-      Serial.println(i,DEC);
-
-      float tempC = round(sensors.getTempC(tempDeviceAddress) * 100.0) / 100.0;
-      float tempF = round(DallasTemperature::toFahrenheit(tempC) * 100.0) / 100.0;
-      // Print the data
-      if (i == 0) {
-        sensorOneStatus = true;
-        tempCSensorOne = tempC;
-        tempFSensorOne = tempF;
-      }
-      else if (i == 1) {
-        sensorTwoStatus = true;
-        tempCSensorTwo = tempC;
-        tempFSensorTwo = tempF;
-      }
-      Serial.print("Temp C: ");
-      Serial.print(tempC);
-      Serial.print(" Temp F: ");
-      Serial.println(tempF);
+  // Check if sensor 1 is connected
+  if (sensors.isConnected(sensorOneAddress)) {
+    Serial.println("Reading Sensor 1");
+    if (!sensorOneStatus) {
+      //delay(1000);
     }
-    else {
-      if (i == 0) {
-        sensorOneStatus = false;
-      }
-      else if (i == 1) {
-        sensorTwoStatus = false;
-      }
-    }
-  }
-
-  if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)) {
-    //&& (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)
-    sendDataPrevMillis = millis();
-    if (prevTempOneC != tempCSensorOne) {
+    sensorOneStatus = true;
+    tempCSensorOne = round(sensors.getTempC(sensorOneAddress) * 100.0) / 100.0;
+    tempFSensorOne = round(DallasTemperature::toFahrenheit(tempCSensorOne) * 100.0) / 100.0;
+  } 
+  else {
+    Serial.println("Sensor 1 DISCONNECTED");
+    if (sensorOneStatus) {
+      tempCSensorOne = -999;
+      tempFSensorOne = -999;
       sendToFirebase("Temp/Sensor_One/Celsius", tempCSensorOne);
       sendToFirebase("Temp/Sensor_One/Fahrenheit", tempFSensorOne);
     }
+    sensorOneStatus = false;
+  }
+
+  Serial.print("Device 1 - ");
+  Serial.print("Temp C: ");
+  Serial.print(tempCSensorOne);
+  Serial.print(" Temp F: ");
+  Serial.println(tempFSensorOne);
+
+  // Check if sensor 2 is connected
+  if (sensors.isConnected(sensorTwoAddress)) {
+    Serial.println("Reading Sensor 2");
+    if (!sensorTwoStatus) {
+      //delay(1000);
+    }
+    sensorTwoStatus = true;
+    tempCSensorTwo = round(sensors.getTempC(sensorTwoAddress) * 100.0) / 100.0;
+    tempFSensorTwo = round(DallasTemperature::toFahrenheit(tempCSensorTwo) * 100.0) / 100.0;
+  } 
+  else {
+    Serial.println("Sensor 2 DISCONNECTED");
+    if (sensorTwoStatus) {
+      tempCSensorTwo = -999;
+      tempFSensorTwo = -999;
+      sendToFirebase("Temp/Sensor_Two/Celsius", tempCSensorTwo);
+      sendToFirebase("Temp/Sensor_Two/Fahrenheit", tempFSensorTwo);
+    }
+    sensorTwoStatus = false;
+  }
+
+  Serial.print("Device 2 - ");
+  Serial.print("Temp C: ");
+  Serial.print(tempCSensorTwo);
+  Serial.print(" Temp F: ");
+  Serial.println(tempFSensorTwo);
+
+  if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)) {
+    Serial.print("Firebase - Previous One : ");
+    Serial.print(prevTempOneC);
+    Serial.print(" Current One:  ");
+    Serial.println(tempCSensorOne);
+    //&& (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)
+    sendDataPrevMillis = millis();
+    if (prevTempOneC != tempCSensorOne) {
+      Serial.print("Sending data for Sensor 1 - C: ");
+      Serial.print(tempCSensorOne);
+      Serial.print(" F: ");
+      Serial.println(tempCSensorOne);
+
+      sendToFirebase("Temp/Sensor_One/Celsius", tempCSensorOne);
+      sendToFirebase("Temp/Sensor_One/Fahrenheit", tempFSensorOne);
+    }
+    Serial.print("Firebase - Previous Two : ");
+    Serial.print(prevTempTwoC);
+    Serial.print(" Current Two:  ");
+    Serial.println(tempCSensorTwo);
     if (prevTempTwoC != tempCSensorTwo) {
+      Serial.print("Sending data for Sensor 2 - C: ");
+      Serial.print(tempCSensorTwo);
+      Serial.print(" F: ");
+      Serial.println(tempCSensorTwo);
       sendToFirebase("Temp/Sensor_Two/Celsius", tempCSensorTwo);
       sendToFirebase("Temp/Sensor_Two/Fahrenheit", tempFSensorTwo);
     }
@@ -209,7 +246,7 @@ void loop() {
   sensorTwoDisplay(tempCSensorTwo);
 
 
-  readFromFirebaseFloat("Threshold/Sensor_One/Max/Celsius", tempCSensorOne, tempCSensorTwo);
+  //readFromFirebaseFloat("Threshold/Sensor_One/Max/Celsius", tempCSensorOne, tempCSensorTwo);
   /*
   if(test == true) {
     test = false;
@@ -253,23 +290,6 @@ void readFromFirebaseFloat(String path, float currentOneC, float currentTwoC) {
     else if (path == "Threshold/Sensor_Two/Max/Celsius") {
       greaterThanThreshold(currentTwoC, fbdo.floatData(), &emailLockMaxTwo);
     }
-      // if (fbdo.dataType() == "float") {
-      //   if (path == "Threshold/Sensor_One/Min/Celsius")) {
-      //     lessThanThreshold(currentOneC, fbdo.floatData(), &emailLockMinOne);
-      //   }
-      //   else if (path == "Threshold/Sensor_One/Max/Celsius") {
-      //     greaterThanThreshold(currentOneC, fbdo.floatData(), &emailLockMaxOne);
-      //   }
-      //   else if (path == "Threshold/Sensor_Two/Min/Celsius") {
-      //     lessThanThreshold(currentTwoC, fbdo.floatData(), &emailLockMinTwo);
-      //   }
-      //   else if (path == "Threshold/Sensor_Two/Max/Celsius") {
-      //     greaterThanThreshold(currentTwoC, fbdo.floatData(), &emailLockMaxTwo);
-      //   }
-      // }
-      // else {
-      //   Serial.println("Not correct data type on read float");
-      // }
   }
   else {
     Serial.println("FAILED: " + fbdo.errorReason());
@@ -289,7 +309,13 @@ void lessThanThreshold(float currentC, float threshold, bool *emailLock) {
 void greaterThanThreshold(float currentC, float threshold, bool *emailLock) {
   if ((currentC > threshold) && (!*emailLock)) {
     *emailLock = true;
-    sendEmailAsync();
+    if (firstEmail) {
+      firstEmail = false;
+      sendEmailAsync();
+    }
+    else {
+      vTaskResume(emailTaskHandle);
+    }
   }
   else if ((currentC <= threshold) && (*emailLock)) {
     Serial.println("RESET MAX");
@@ -299,7 +325,8 @@ void greaterThanThreshold(float currentC, float threshold, bool *emailLock) {
 
 void emailTask(void *param) {
   sendEmail(); // Call your email function here
-  vTaskDelete(NULL); // Delete the task after email is sent
+  vTaskSuspend(emailTaskHandle); // Delete the task after email is sent
+  emailTaskHandle = NULL;
 }
 
 void sendEmailAsync() {
@@ -317,7 +344,7 @@ void sendEmailAsync() {
 }
 
 
-/* To be Deleted
+///* To be Deleted
 // function to print a device address
 void printAddress(DeviceAddress deviceAddress) {
   for (uint8_t i = 0; i < 8; i++){
@@ -326,7 +353,7 @@ void printAddress(DeviceAddress deviceAddress) {
   }
 }
 // To be Deleted
-*/
+//*/
 
 void mailSetup() {
   /*  Set the network reconnection option */
@@ -431,6 +458,15 @@ void tempSensorSetup() {
   
   Serial.print(numberOfDevices, DEC);
   Serial.println(" devices have been found");
+
+  if (numberOfDevices > 0) {
+    sensors.getAddress(sensorOneAddress, 0);
+  }
+
+  if (numberOfDevices > 1) {
+    sensors.getAddress(sensorTwoAddress, 1);
+  }
+
   /* To be Deleted
   // Loop through each device, print out address
   for(int i=0; i < numberOfDevices; i++) {
@@ -485,8 +521,13 @@ void sensorOneDisplay(float temp) {
   clearSensorOneTempC();
   display.setTextSize(2);     
   display.setTextColor(SSD1306_WHITE); 
-  display.setCursor(34, 20);     
-  display.print(temp);
+  display.setCursor(34, 20);
+  if (temp != -999.00) {
+    display.print(temp);
+  }
+  else {
+    display.print("DISC");
+  }
   display.display();
   prevTempOneC = temp;
 }
@@ -495,8 +536,13 @@ void sensorTwoDisplay(float temp) {
   clearSensorTwoTempC();
   display.setTextSize(2);     
   display.setTextColor(SSD1306_WHITE); 
-  display.setCursor(34, 42);     
-  display.print(temp);
+  display.setCursor(34, 42);
+  if (temp != -999.00) {
+    display.print(temp);
+  }
+  else {
+    display.print("DISC");
+  }
   display.display();
   prevTempTwoC = temp;
 }
@@ -504,11 +550,21 @@ void sensorTwoDisplay(float temp) {
 void clearSensorOneTempC() {
   display.setCursor(34,20);
   display.setTextColor(SSD1306_BLACK);
-  display.print(prevTempOneC);
+  if (prevTempOneC != -999.00) {
+    display.print(prevTempOneC);
+  }
+  else {
+    display.print("DISC");
+  }
 }
 
 void clearSensorTwoTempC() {
   display.setCursor(34,42);
   display.setTextColor(SSD1306_BLACK);
-  display.print(prevTempTwoC);
+  if (prevTempTwoC != -999.00) {
+    display.print(prevTempTwoC);
+  }
+  else {
+    display.print("DISC");
+  }
 }
