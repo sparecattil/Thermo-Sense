@@ -35,10 +35,9 @@ float prevTempTwoF = 0;
 bool sensorOneStatus;
 bool sensorTwoStatus;
 
-bool emailLockMinOne = false;
-bool emailLockMaxOne = false;
-bool emailLockMinTwo = false;
-bool emailLockMaxTwo = false;
+bool sensorOneActive;
+bool sensorTwoActive;
+
 TaskHandle_t emailTaskHandle = NULL; // Handle for the email task
 bool firstEmail = true;
 bool test = true;
@@ -52,7 +51,7 @@ DeviceAddress tempDeviceAddress; // Current device address
 DeviceAddress sensorOneAddress;
 DeviceAddress sensorTwoAddress;
 
-//To be Deleted
+
 struct Button {
   const uint8_t PIN;
   uint32_t numberKeyPresses;
@@ -60,19 +59,25 @@ struct Button {
 };
 
 Button button1 = {18, 0, false};
+Button button2 = {19, 0, false};
 
-void IRAM_ATTR isr() {
+void IRAM_ATTR isrButton1() {
   button1.numberKeyPresses++;
   button1.pressed = true;
 }
-//To be Deleted
 
+void IRAM_ATTR isrButton2() {
+  button2.numberKeyPresses++;
+  button2.pressed = true;
+}
 
 void setup() {
   Serial.begin(115200);
 
-  //pinMode(button1.PIN, INPUT_PULLUP); //To be Deleted
-  //attachInterrupt(button1.PIN, isr, FALLING); //To be Deleted
+  pinMode(button1.PIN, INPUT_PULLUP);
+  pinMode(button2.PIN, INPUT_PULLUP);
+  attachInterrupt(button1.PIN, isrButton1, FALLING);
+  attachInterrupt(button2.PIN, isrButton2, FALLING);
 
   tempSensorSetup(); // Sets up the temperature sensors
 
@@ -121,8 +126,7 @@ void setup() {
 
 void loop() {
   sensors.requestTemperatures(); 
-  //float temperatureC = sensors.getTempCByIndex(0);
-  //float temperatureF = sensors.getTempFByIndex(0);
+  
   float tempCSensorOne;
   float tempFSensorOne;
   float tempCSensorTwo;
@@ -131,9 +135,6 @@ void loop() {
   // Check if sensor 1 is connected
   if (sensors.isConnected(sensorOneAddress)) {
     Serial.println("Reading Sensor 1");
-    if (!sensorOneStatus) {
-      //delay(1000);
-    }
     sensorOneStatus = true;
     tempCSensorOne = round(sensors.getTempC(sensorOneAddress) * 100.0) / 100.0;
     tempFSensorOne = round(DallasTemperature::toFahrenheit(tempCSensorOne) * 100.0) / 100.0;
@@ -158,9 +159,6 @@ void loop() {
   // Check if sensor 2 is connected
   if (sensors.isConnected(sensorTwoAddress)) {
     Serial.println("Reading Sensor 2");
-    if (!sensorTwoStatus) {
-      //delay(1000);
-    }
     sensorTwoStatus = true;
     tempCSensorTwo = round(sensors.getTempC(sensorTwoAddress) * 100.0) / 100.0;
     tempFSensorTwo = round(DallasTemperature::toFahrenheit(tempCSensorTwo) * 100.0) / 100.0;
@@ -212,21 +210,98 @@ void loop() {
     }
     //sendToFirebase("Power_Status", powerStatus);
   }
-  //delay(1000);
-  sensorOneDisplay(tempCSensorOne);
-  sensorTwoDisplay(tempCSensorTwo);
+
+  //sensorOneDisplay(tempCSensorOne);
+  //sensorTwoDisplay(tempCSensorTwo);
 
 
   //readFromFirebaseFloat("Threshold/Sensor_One/Max/Celsius", tempCSensorOne, tempCSensorTwo);
   /*
   if (button1.pressed) {
     Serial.printf("Button has been pressed %u times\n", button1.numberKeyPresses);
-    button1.pressed = false;
-    sendEmail();
+    if (button1.numberKeyPresses % 2 == 0) {
+      button1.pressed = false;
+      button1.numberKeyPresses = 0;
+    }
+    else {
+      clearSensorOneTempC();
+    }
+  }
+  else {
+    sensorOneDisplay(tempCSensorOne);
+  }
+
+  if (button2.pressed) {
+    Serial.printf("Button has been pressed %u times\n", button2.numberKeyPresses);
+    if (button2.numberKeyPresses % 2 == 0) {
+      button2.pressed = false;
+      button2.numberKeyPresses = 0;
+    }
+    else {
+      clearSensorTwoTempC();
+    }
+  }
+  else {
+    sensorTwoDisplay(tempCSensorTwo);
   }
   */
   
-  //delay(1000);
+  if (button1.pressed) {
+    //Active
+    if (readFromFirebaseString("Sensors/Sensor_One")) {
+      sendToFirebaseString("Sensors/Sensor_One", "Off"); //OFF change to what?
+    }
+    //Off
+    else {
+      sendToFirebaseString("Sensors/Sensor_One","Active");
+    }
+    button1.pressed = false;
+  }
+
+  if (button2.pressed) {
+    //Active
+    if (readFromFirebaseString("Sensors/Sensor_Two")) {
+      sendToFirebaseString("Sensors/Sensor_Two", "Off"); //OFF change to what?
+    }
+    //Off
+    else {
+      sendToFirebaseString("Sensors/Sensor_Two","Active");
+    }
+    button2.pressed = false;
+  }
+
+  if (readFromFirebaseString("Sensors/Sensor_One") || tempCSensorOne == -999.0) {
+    if (!sensorOneActive) {
+      clearSensorDisplayOff(20);
+    }
+    sensorOneActive = true;
+    sensorOneDisplay(tempCSensorOne);
+  }
+  else {
+    if (sensorOneActive) {
+      clearSensorOneTempC();
+      sensorDisplayOff(20);
+    }
+    sensorOneActive = false;
+  }
+
+
+  if (readFromFirebaseString("Sensors/Sensor_Two") || tempCSensorTwo == -999.0) {
+    if (!sensorTwoActive) {
+      clearSensorDisplayOff(42);
+    }
+    sensorTwoActive = true;
+    sensorTwoDisplay(tempCSensorTwo);
+  }
+  else {
+    if (sensorTwoActive) {
+      clearSensorOneTempC();
+      sensorDisplayOff(20);
+    }
+    sensorTwoActive = false;
+  }
+  
+
 }
 
 void sendToFirebase(String path, float value) {
@@ -241,9 +316,32 @@ void sendToFirebase(String path, float value) {
   }
 }
 
-void readFromFirebaseFloat(String path, float currentOneC, float currentTwoC) {
-  if (Firebase.RTDB.getFloat(&fbdo, path)) {
-    
+void sendToFirebaseString(String path, String value) {
+  if (Firebase.RTDB.setString(&fbdo, path, value)) {
+      Serial.println(); 
+      Serial.print(value);
+      Serial.print("- successfully saved to: " + fbdo.dataPath());
+      Serial.println(" (" + fbdo.dataType() + ")");
+  }
+  else {
+    Serial.println("FAILED: " + fbdo.errorReason());
+  }
+}
+
+bool readFromFirebaseString(String path) {
+  if (Firebase.RTDB.getString(&fbdo, path)) {
+    if ((fbdo.stringData() == "Active") && (path == "Sensors/Sensor_One")) {
+      return true;
+    }
+    else if ((fbdo.stringData() == "Disconnected") && (path == "Sensors/Sensor_One")){
+      return false;
+    }
+    else if ((fbdo.stringData() == "Active") && (path == "Sensors/Sensor_Two")) {
+      return true;
+    }
+    else if ((fbdo.stringData() == "Disconnected") && (path == "Sensors/Sensor_Two")){
+      return false;
+    }
   }
   else {
     Serial.println("FAILED: " + fbdo.errorReason());
@@ -379,4 +477,18 @@ void clearSensorTwoTempC() {
   else {
     display.print("DISC");
   }
+}
+
+void sensorDisplayOff(int pos_y) {
+  display.setTextSize(2);     
+  display.setTextColor(SSD1306_WHITE); 
+  display.setCursor(34, pos_y);
+  display.print("Off");
+  display.display();
+}
+
+void clearSensorDisplayOff(int pos_y) {
+  display.setCursor(34, pos_y);
+  display.setTextColor(SSD1306_BLACK);
+  display.print("Off");
 }
