@@ -1,5 +1,4 @@
-#include <Arduino.h>
-#include <Hashtable.h> 
+#include <Arduino.h> 
 #include <WiFi.h>
 #include <Firebase_ESP_Client.h>
 #include "addons/TokenHelper.h"
@@ -10,7 +9,6 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <ESP_Mail_Client.h>
 
 #define WIFI_SSID "UI-DeviceNet"
 #define WIFI_PASSWORD "UI-DeviceNet"
@@ -21,19 +19,10 @@
 #define OLED_RESET -1
 #define SCREEN_ADDRESS 0x3C
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-#define SMTP_HOST "smtp.gmail.com"
-#define SMTP_PORT 465
-#define AUTHOR_EMAIL "seniordesignsebshivjohnlogan@gmail.com"
-#define AUTHOR_PASSWORD "ymgw lmeh tcho qqhy"
-#define RECIPIENT_EMAIL "spddimensions@gmail.com"
 
-SMTPSession smtp;
-ESP_Mail_Session configMail;
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
-
-void smtpCallback(SMTP_Status status); // Callback function to get the Email sending status
 
 unsigned long sendDataPrevMillis = 0;
 bool signupOK = false;
@@ -62,22 +51,6 @@ int numberOfDevices; // Number of temperature devices found
 DeviceAddress tempDeviceAddress; // Current device address
 DeviceAddress sensorOneAddress;
 DeviceAddress sensorTwoAddress;
-
-//float minTempLimitSensorOne; // Minimum temperature limit of sensor one
-//float maxTempLimitSensorOne; // Maximum temperature limit of sensor one
-//float minTempLimitSensorTwo; // Minimum temperature limit of sensor two
-//float maxTempLimitSensorTwo; // Maximum temperature limit of sensor two
-/*
-Hashtable<String, float> tempThresholds;
-tempThresholds.put("Threshold/Sensor_One/Min/Celsius", 50.0);
-tempThresholds.put("Threshold/Sensor_One/Min/Fahrenheit", 122.0);
-tempThresholds.put("Threshold/Sensor_One/Max/Celsius", 50.0);
-tempThresholds.put("Threshold/Sensor_One/Max/Fahrenheit", 122.0);
-tempThresholds.put("Threshold/Sensor_Two/Min/Celsius", 50.0);
-tempThresholds.put("Threshold/Sensor_Two/Min/Fahrenheit", 122.0);
-tempThresholds.put("Threshold/Sensor_Two/Max/Celsius", 50.0);
-tempThresholds.put("Threshold/Sensor_Two/Max/Fahrenheit", 122.0);
-*/
 
 //To be Deleted
 struct Button {
@@ -144,8 +117,6 @@ void setup() {
   display.clearDisplay();
   readingDisplaySetup();
 
-  mailSetup();
-
 }
 
 void loop() {
@@ -171,7 +142,7 @@ void loop() {
     Serial.println("Sensor 1 DISCONNECTED");
     if (sensorOneStatus) {
       tempCSensorOne = -999;
-      tempFSensorOne = -999;
+      tempFSensorOne = round(DallasTemperature::toFahrenheit(tempCSensorOne) * 100.0) / 100.0;
       sendToFirebase("Temp/Sensor_One/Celsius", tempCSensorOne);
       sendToFirebase("Temp/Sensor_One/Fahrenheit", tempFSensorOne);
     }
@@ -198,7 +169,7 @@ void loop() {
     Serial.println("Sensor 2 DISCONNECTED");
     if (sensorTwoStatus) {
       tempCSensorTwo = -999;
-      tempFSensorTwo = -999;
+      tempFSensorTwo = round(DallasTemperature::toFahrenheit(tempCSensorTwo) * 100.0) / 100.0;
       sendToFirebase("Temp/Sensor_Two/Celsius", tempCSensorTwo);
       sendToFirebase("Temp/Sensor_Two/Fahrenheit", tempFSensorTwo);
     }
@@ -248,12 +219,6 @@ void loop() {
 
   //readFromFirebaseFloat("Threshold/Sensor_One/Max/Celsius", tempCSensorOne, tempCSensorTwo);
   /*
-  if(test == true) {
-    test = false;
-    sendEmailAsync();
-  }
-  */
-  /*
   if (button1.pressed) {
     Serial.printf("Button has been pressed %u times\n", button1.numberKeyPresses);
     button1.pressed = false;
@@ -278,68 +243,10 @@ void sendToFirebase(String path, float value) {
 
 void readFromFirebaseFloat(String path, float currentOneC, float currentTwoC) {
   if (Firebase.RTDB.getFloat(&fbdo, path)) {
-    if (path == "Threshold/Sensor_One/Min/Celsius") {
-      lessThanThreshold(currentOneC, fbdo.floatData(), &emailLockMinOne);
-    }
-    else if (path == "Threshold/Sensor_One/Max/Celsius") {
-      greaterThanThreshold(currentOneC, fbdo.floatData(), &emailLockMaxOne);
-    }
-    else if (path == "Threshold/Sensor_Two/Min/Celsius") {
-      lessThanThreshold(currentTwoC, fbdo.floatData(), &emailLockMinTwo);
-    }
-    else if (path == "Threshold/Sensor_Two/Max/Celsius") {
-      greaterThanThreshold(currentTwoC, fbdo.floatData(), &emailLockMaxTwo);
-    }
+    
   }
   else {
     Serial.println("FAILED: " + fbdo.errorReason());
-  }
-}
-
-void lessThanThreshold(float currentC, float threshold, bool *emailLock) {
-  if ((currentC < threshold) && (!*emailLock)) {
-    *emailLock = true;
-    sendEmailAsync();
-  }
-  else if (currentC >= threshold) {
-    *emailLock = false;
-  }
-}
-
-void greaterThanThreshold(float currentC, float threshold, bool *emailLock) {
-  if ((currentC > threshold) && (!*emailLock)) {
-    *emailLock = true;
-    if (firstEmail) {
-      firstEmail = false;
-      sendEmailAsync();
-    }
-    else {
-      vTaskResume(emailTaskHandle);
-    }
-  }
-  else if ((currentC <= threshold) && (*emailLock)) {
-    Serial.println("RESET MAX");
-    *emailLock = false;
-  }
-}
-
-void emailTask(void *param) {
-  sendEmail(); // Call your email function here
-  vTaskSuspend(emailTaskHandle); // Delete the task after email is sent
-  emailTaskHandle = NULL;
-}
-
-void sendEmailAsync() {
-  if (emailTaskHandle == NULL) { // Check if task is already running
-    xTaskCreatePinnedToCore(
-      emailTask,      // Task function
-      "Email Task",   // Task name
-      8192,           // Stack size
-      NULL,           // Parameters
-      1,              // Task priority
-      &emailTaskHandle, // Task handle
-      1               // Run on core 1
-    );
   }
 }
 
@@ -354,101 +261,6 @@ void printAddress(DeviceAddress deviceAddress) {
 }
 // To be Deleted
 //*/
-
-void mailSetup() {
-  /*  Set the network reconnection option */
-  MailClient.networkReconnect(true);
-
-  /** Enable the debug via Serial port
-   * 0 for no debugging
-   * 1 for basic level debugging
-   *
-   * Debug port can be changed via ESP_MAIL_DEFAULT_DEBUG_PORT in ESP_Mail_FS.h
-   */
-  smtp.debug(1);
-
-  /* Set the callback function to get the sending results */
-  smtp.callback(smtpCallback);
-
-
-
-  /* Set the session config */
-  configMail.server.host_name = SMTP_HOST;
-  configMail.server.port = SMTP_PORT;
-  configMail.login.email = AUTHOR_EMAIL;
-  configMail.login.password = AUTHOR_PASSWORD;
-  configMail.login.user_domain = "";
-
-  /*
-  Set the NTP config time
-  For times east of the Prime Meridian use 0-12
-  For times west of the Prime Meridian add 12 to the offset.
-  Ex. American/Denver GMT would be -6. 6 + 12 = 18
-  See https://en.wikipedia.org/wiki/Time_zone for a list of the GMT/UTC timezone offsets
-  */
-  configMail.time.ntp_server = F("pool.ntp.org,time.nist.gov");
-  configMail.time.gmt_offset = 3;
-  configMail.time.day_light_offset = 0;
-}
-
-void sendEmail(){
-  Serial.println("Got to sendEmail()");
-  /* Declare the message class */
-  SMTP_Message message;
-
-  /* Set the message headers */
-  message.sender.name = F("ESP");
-  message.sender.email = AUTHOR_EMAIL;
-  message.subject = F("ESP Test Email");
-  message.addRecipient(F("Sara"), RECIPIENT_EMAIL);
-   
-  //Send raw text message
-  String textMsg = "Hello World! - Sent from ESP board";
-  message.text.content = textMsg.c_str();
-  message.text.charSet = "us-ascii";
-  message.text.transfer_encoding = Content_Transfer_Encoding::enc_7bit;
-  
-  message.priority = esp_mail_smtp_priority::esp_mail_smtp_priority_low;
-  message.response.notify = esp_mail_smtp_notify_success | esp_mail_smtp_notify_failure | esp_mail_smtp_notify_delay;
-
-
-  /* Connect to the server */
-  if (!smtp.connect(&configMail)){
-   // ESP_MAIL_PRINTF("Connection error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
-    return;
-  }
-  
-  
-  if (!MailClient.sendMail(&smtp, &message)) {
-    Serial.println("Error sending Email, " + smtp.errorReason());
-  }
- 
-}
-
-
-// Callback function to get the Email sending status
-void smtpCallback(SMTP_Status status){
-  Serial.println(status.info()); // Printing current status
-
-  // Print the sending result
-  if (status.success()) {
-    Serial.println("----------------");
-    ESP_MAIL_PRINTF("Message sent success: %d\n", status.completedCount());
-    ESP_MAIL_PRINTF("Message sent failed: %d\n", status.failedCount());
-    Serial.println("----------------\n");
-
-    for (size_t i = 0; i < smtp.sendingResult.size(); i++) {
-      SMTP_Result result = smtp.sendingResult.getItem(i); // Getting the result item
-      ESP_MAIL_PRINTF("Message No: %d\n", i + 1);
-      ESP_MAIL_PRINTF("Status: %s\n", result.completed ? "success" : "failed");
-      ESP_MAIL_PRINTF("Recipient: %s\n", result.recipients.c_str());
-      ESP_MAIL_PRINTF("Subject: %s\n", result.subject.c_str());
-    }
-    Serial.println("----------------\n");
-
-    smtp.sendingResult.clear(); // Clearing the sending result
-  }
-}
 
 // Sets up the two DS18B20 temperature sensors
 void tempSensorSetup() {
