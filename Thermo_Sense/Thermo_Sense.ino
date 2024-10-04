@@ -85,7 +85,7 @@ Button button2 = {19, false}; // Pin 19, False - Button is not pressed
 ///////////////////////////////////////////////////////////////////////////////////////
 // ISR : isrButton1()
 // Interrupt Service Routine for sensor one button
-// Sets pressed attribute of button one
+// Sets pressed attribute of button one when the button is pressed
 ///////////////////////////////////////////////////////////////////////////////////////
 void IRAM_ATTR isrButton1() {
   button1.pressed = true;
@@ -94,7 +94,7 @@ void IRAM_ATTR isrButton1() {
 ///////////////////////////////////////////////////////////////////////////////////////
 // ISR : isrButton2()
 // Interrupt Service Routine for sensor two button
-// Sets pressed attribute of button two
+// Sets pressed attribute of button two when the button is pressed
 ///////////////////////////////////////////////////////////////////////////////////////
 void IRAM_ATTR isrButton2() {
   button2.pressed = true;
