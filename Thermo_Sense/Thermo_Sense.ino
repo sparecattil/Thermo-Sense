@@ -8,8 +8,8 @@
 // Temperature reading in Celsius and Fahrenheit are sent to Firebase
 // Displays the temperatures of each sensor to a SS1306 OLED display in Celsius
 // Sensors On/Off is controlled by attributes on Firebase which are set by two buttons
-// on the third box, If the sensors are turned off from the web, the esp32 will read
-// detect the change from Firebase and turn the respective sensor On/Off
+// on the third box, If the sensors are turned off from the web client, the esp32 will
+// read and detect the changes from Firebase to turn the respective sensor On/Off
 /////////////////////////////////////<THERMO SENSE>////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 
