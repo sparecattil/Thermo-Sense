@@ -1,3 +1,10 @@
+///////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////<THERMO SENSE>////////////////////////////////////
+// Group Members: Sebastian Parecatti, Shiv Patel, John Finch, 
+// Description: This file is designed for an esp32 microcontroller
+/////////////////////////////////////<THERMO SENSE>////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+
 #include <Arduino.h> 
 #include <WiFi.h>
 #include <Firebase_ESP_Client.h>
@@ -20,23 +27,29 @@
 #define SCREEN_ADDRESS 0x3C
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-FirebaseData fbdo;
+FirebaseData fbdo, fbdo_one, fbdo_two;
 FirebaseAuth auth;
 FirebaseConfig config;
+bool streamAvailableOne = false;
+bool streamAvailableTwo = false;
 
 unsigned long sendDataPrevMillis = 0;
 bool signupOK = false;
-int powerStatus = 1;
+int powerStatus = 1; // NOT USED POSSIBLY DELETE
+
 float prevTempOneC = 0;
 float prevTempOneF = 0;
 float prevTempTwoC = 0;
 float prevTempTwoF = 0;
 
-bool sensorOneStatus;
-bool sensorTwoStatus;
+bool sensorOneStatus; // Handles the single execution of the tasks for sensor one disconnection
+bool sensorTwoStatus; // Handles the single execution of the tasks for sensor two disconnection
 
-bool sensorOneActive;
+bool sensorOneActive; // Handles the one time display of "Off" to the OLED when sensor one turned off
 bool sensorTwoActive;
+
+String onStatusOne;
+String onStatusTwo;
 
 TaskHandle_t emailTaskHandle = NULL; // Handle for the email task
 bool firstEmail = true;
@@ -50,6 +63,11 @@ int numberOfDevices; // Number of temperature devices found
 DeviceAddress tempDeviceAddress; // Current device address
 DeviceAddress sensorOneAddress;
 DeviceAddress sensorTwoAddress;
+
+float tempCSensorOne;
+float tempFSensorOne;
+float tempCSensorTwo;
+float tempFSensorTwo;
 
 
 struct Button {
@@ -107,6 +125,14 @@ void setup() {
   
   Firebase.reconnectWiFi(true);
 
+  if (!Firebase.RTDB.beginStream(&fbdo_one, "/Sensors/Sensor_One")) {
+    Serial.printf("stream 1 begin error, %s\n\n", fbdo_one.errorReason().c_str());
+  }
+
+  if (!Firebase.RTDB.beginStream(&fbdo_two, "/Sensors/Sensor_Two")) {
+    Serial.printf("stream 2 begin error, %s\n\n", fbdo_two.errorReason().c_str());
+  }
+  
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
@@ -127,10 +153,10 @@ void setup() {
 void loop() {
   sensors.requestTemperatures(); 
   
-  float tempCSensorOne;
-  float tempFSensorOne;
-  float tempCSensorTwo;
-  float tempFSensorTwo;
+  // float tempCSensorOne;
+  // float tempFSensorOne;
+  // float tempCSensorTwo;
+  // float tempFSensorTwo;
 
   // Check if sensor 1 is connected
   if (sensors.isConnected(sensorOneAddress)) {
@@ -208,43 +234,14 @@ void loop() {
       sendToFirebase("Temp/Sensor_Two/Celsius", tempCSensorTwo);
       sendToFirebase("Temp/Sensor_Two/Fahrenheit", tempFSensorTwo);
     }
-    //sendToFirebase("Power_Status", powerStatus);
-  }
-
-  //sensorOneDisplay(tempCSensorOne);
-  //sensorTwoDisplay(tempCSensorTwo);
-
-
-  //readFromFirebaseFloat("Threshold/Sensor_One/Max/Celsius", tempCSensorOne, tempCSensorTwo);
-  /*
-  if (button1.pressed) {
-    Serial.printf("Button has been pressed %u times\n", button1.numberKeyPresses);
-    if (button1.numberKeyPresses % 2 == 0) {
-      button1.pressed = false;
-      button1.numberKeyPresses = 0;
+    if (!powerStatus) {
+      powerStatus = true;
     }
     else {
-      clearSensorOneTempC();
+      powerStatus = false;
     }
+    sendToFirebase("Power_Status", powerStatus);
   }
-  else {
-    sensorOneDisplay(tempCSensorOne);
-  }
-
-  if (button2.pressed) {
-    Serial.printf("Button has been pressed %u times\n", button2.numberKeyPresses);
-    if (button2.numberKeyPresses % 2 == 0) {
-      button2.pressed = false;
-      button2.numberKeyPresses = 0;
-    }
-    else {
-      clearSensorTwoTempC();
-    }
-  }
-  else {
-    sensorTwoDisplay(tempCSensorTwo);
-  }
-  */
   
   if (button1.pressed) {
     //Active
@@ -267,9 +264,55 @@ void loop() {
     else {
       sendToFirebaseString("Sensors/Sensor_Two","Active");
     }
+    
     button2.pressed = false;
   }
 
+  if (Firebase.ready() && signupOK) {
+    if (!Firebase.RTDB.readStream(&fbdo_one)) {
+      Serial.printf("stream 1 read error, %s\n\n", fbdo_one.errorReason().c_str());
+    }
+    if (fbdo_one.streamAvailable()) {
+      onStatusOne = fbdo_one.stringData();
+    }
+
+    if (!Firebase.RTDB.readStream(&fbdo_two)) {
+      Serial.printf("stream 2 read error, %s\n\n", fbdo_two.errorReason().c_str());
+    }
+    if (fbdo_two.streamAvailable()) {
+      onStatusTwo = fbdo_two.stringData();
+    }
+  }
+
+  if ((onStatusOne == "Active") || (tempCSensorOne == -999.0)) {
+    Serial.print(onStatusOne);
+    Serial.println("<------------On---------->");
+    clearSensorDisplayOff(20);
+    sensorOneDisplay(tempCSensorOne);
+  }
+  else if (onStatusOne == "Off") {
+    Serial.print(onStatusOne);
+    Serial.println("<-----------off---------->");
+    clearSensorOneTempC();
+    sensorDisplayOff(20);
+  }
+
+  if ((onStatusTwo == "Active") || tempCSensorTwo == -999.0) {
+    Serial.print(onStatusTwo);
+    Serial.println("<-----------ON----------->");
+    clearSensorDisplayOff(42);
+    sensorTwoDisplay(tempCSensorTwo);
+  }
+  else if (onStatusTwo == "Off") {
+    Serial.print(onStatusTwo);
+    Serial.println("<-----------off----------->");
+    clearSensorTwoTempC();
+    sensorDisplayOff(42);
+  }
+
+  //sensorOneDisplay(tempCSensorOne, streamFromFirebaseString(streamOne, streamAvailableOne));
+  //sensorTwoDisplay(tempCSensorTwo, streamFromFirebaseString(streamTwo, streamAvailableTwo));
+/*
   if (readFromFirebaseString("Sensors/Sensor_One") || tempCSensorOne == -999.0) {
     if (!sensorOneActive) {
       clearSensorDisplayOff(20);
@@ -295,12 +338,12 @@ void loop() {
   }
   else {
     if (sensorTwoActive) {
-      clearSensorOneTempC();
-      sensorDisplayOff(20);
+      clearSensorTwoTempC();
+      sensorDisplayOff(42);
     }
     sensorTwoActive = false;
   }
-  
+  */
 
 }
 
@@ -325,6 +368,34 @@ void sendToFirebaseString(String path, String value) {
   }
   else {
     Serial.println("FAILED: " + fbdo.errorReason());
+  }
+}
+
+bool readFirebaseStream(String path) {
+  if (Firebase.ready() && signupOK) {
+    if (!Firebase.RTDB.readStream(&fbdo_one)) {
+      Serial.printf("stream 1 read error, %s\n\n", fbdo_one.errorReason().c_str());
+    }
+    if (fbdo_one.streamAvailable()) {
+      if (fbdo_one.stringData() == "Active") {
+        return true;
+      }
+      else if (fbdo_one.stringData() == "Off") {
+        return false;
+      }
+    }
+
+    if (!Firebase.RTDB.readStream(&fbdo_two)) {
+      Serial.printf("stream 2 read error, %s\n\n", fbdo_two.errorReason().c_str());
+    }
+    if (fbdo_two.streamAvailable()) {
+      if (fbdo_two.stringData() == "Active") {
+        return true;
+      }
+      else if (fbdo_two.stringData() == "Off") {
+        return false;
+      }
+    }
   }
 }
 
@@ -436,7 +507,7 @@ void sensorOneDisplay(float temp) {
     display.print(temp);
   }
   else {
-    display.print("DISC");
+    display.print("UNPLUG");
   }
   display.display();
   prevTempOneC = temp;
@@ -451,7 +522,7 @@ void sensorTwoDisplay(float temp) {
     display.print(temp);
   }
   else {
-    display.print("DISC");
+    display.print("UNPLUG");
   }
   display.display();
   prevTempTwoC = temp;
@@ -464,7 +535,7 @@ void clearSensorOneTempC() {
     display.print(prevTempOneC);
   }
   else {
-    display.print("DISC");
+    display.print("UNPLUG");
   }
 }
 
@@ -475,7 +546,7 @@ void clearSensorTwoTempC() {
     display.print(prevTempTwoC);
   }
   else {
-    display.print("DISC");
+    display.print("UNPLUG");
   }
 }
 
