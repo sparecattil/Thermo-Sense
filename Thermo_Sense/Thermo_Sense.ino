@@ -103,7 +103,7 @@ void IRAM_ATTR isrButton2() {
 void setup() {
   Serial.begin(115200);
 
-  //----Button setup----//
+  ////--------Button setup--------////
   pinMode(button1.PIN, INPUT_PULLUP);
   pinMode(button2.PIN, INPUT_PULLUP);
   attachInterrupt(button1.PIN, isrButton1, FALLING); // Isr triggers on a falling edge for button 1
