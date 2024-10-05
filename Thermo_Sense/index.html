@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title></title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Overpass&display=swap"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="script.js"></script>
+  </head>
+  <body class="background">
+    <div class="backgroundButton">
+      <input type="checkbox" id="backgroundInput" class="toggleBackground" />
+      <label
+        for="backgroundInput"
+        id="backgroundToggled"
+        class="labelBackground"
+      >
+        <div class="backgroundSwitch">
+          <p id="toggleBackgroundText">☾</p>
+        </div>
+      </label>
+    </div>
+    <div class="title">
+      <h1>THERMO<span class="blueHighlight">SENSE</span></h1>
+    </div>
+    <div class="degreeType">
+      <button id="modeSensorOne">°C</button>
+      <button id="modeSensorTwo">°C</button>
+    </div>
+    <div class="circularBoxes">
+      <div class="circularBoxOne" id="sensorOneColor">
+        <h1>ONE</h1>
+        <p id="tempSensorOne"></p>
+      </div>
+      <div class="circularBoxTwo">
+        <h1>TWO</h1>
+        <p id="tempSensorTwo"></p>
+      </div>
+    </div>
+    <div class="connectButtons">
+      <button id="DisconnectOne">POWER OFF</button>
+      <button id="DisconnectTwo">POWER OFF</button>
+    </div>
+    <div class="smsWrapper">
+      <div class="sms">
+        <h1>SENSOR ONE THRESHOLDS</h1>
+        <div class="temps">
+          <p>MIN TEMP</p>
+          <p>MAX TEMP</p>
+        </div>
+        <div class="tempCaser">
+          <div class="minTemp">
+            <button id="sensorOneMinDown">⬇</button>
+            <p id="sensorOneMin">20.00°C</p>
+            <button id="sensorOneMinUp">⬆</button>
+          </div>
+          <div class="maxTemp">
+            <button id="sensorOneMaxDown">⬇</button>
+            <p id="sensorOneMax">50.00°C</p>
+            <button id="sensorOneMaxUp">⬆</button>
+          </div>
+        </div>
+        <div class="messages">
+          <div class="oneMinMessage">
+            <p>MIN MESSAGE</p>
+            <p>MAX MESSAGE</p>
+          </div>
+          <div class="messageText">
+            <textarea
+              id="sensorOneMinMessage"
+              placeholder="ENTER TEXT"
+            ></textarea>
+            <textarea
+              id="sensorOneMaxMessage"
+              placeholder="ENTER TEXT"
+            ></textarea>
+          </div>
+          <div class="sendMessages">
+            <button id="sendOneMinMessage">SEND</button>
+            <button id="sendOneMaxMessage">SEND</button>
+          </div>
+        </div>
+      </div>
+      <div class="smsSettings">
+        <h1>EMAIL ALERT SETTINGS</h1>
+        <div class="emailHub">
+          <label for="email">EMAIL:</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="LabOne@senior.com"
+            required
+          />
+          <button id="updateEmail">SUBMIT</button>
+        </div>
+      </div>
+      <div class="sms">
+        <h1>SENSOR TWO THRESHOLDS</h1>
+        <div class="temps">
+          <p>MIN TEMP</p>
+          <p>MAX TEMP</p>
+        </div>
+        <div class="tempCaser">
+          <div class="minTemp">
+            <button id="sensorTwoMinDown">⬇</button>
+            <p id="sensorTwoMin">20.00°C</p>
+            <button id="sensorTwoMinUp">⬆</button>
+          </div>
+          <div class="maxTemp">
+            <button id="sensorTwoMaxDown">⬇</button>
+            <p id="sensorTwoMax">50.00°C</p>
+            <button id="sensorTwoMaxUp">⬆</button>
+          </div>
+        </div>
+        <div class="messages">
+          <div class="oneMinMessage">
+            <p>MIN MESSAGE</p>
+            <p>MAX MESSAGE</p>
+          </div>
+          <div class="messageText">
+            <textarea
+              id="sensorTwoMinMessage"
+              placeholder="ENTER TEXT"
+            ></textarea>
+            <textarea
+              id="sensorTwoMaxMessage"
+              placeholder="ENTER TEXT"
+            ></textarea>
+          </div>
+          <div class="sendMessages">
+            <button id="sendTwoMinMessage">SEND</button>
+            <button id="sendTwoMaxMessage">SEND</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="chartButton">
+      <input type="checkbox" id="chartInput" class="toggle" />
+      <label for="chartInput" id="chartToggled" class="labelChart">
+        <div class="chartSwitch">
+          <p id="chartToggledText">C</p>
+        </div>
+      </label>
+    </div>
+    <canvas id="myChart" width="500" height="100"></canvas>
+  </body>
+</html>

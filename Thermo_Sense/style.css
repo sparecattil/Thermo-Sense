@@ -1,0 +1,516 @@
+
+/* Overall Webiste must follow these restrictions */
+* {
+  box-sizing: border-box;
+  font-family: 'Overpass', sans-serif;
+  max-width: 3000px;
+}
+
+/* Backgroud Logic */
+.background {
+  width: 100%;
+  height: 100vh;
+  background: #2d384a;
+}
+
+/* Backgroud Button Logic --> Dark/Light Mode */
+.backgroundButton {
+  display: flex;
+  justify-content: right;
+  align-items: right;
+  margin-top: 20px;
+  margin-right: 30px;
+}
+
+/* Dark/Light Mode Toggle Input */
+.toggleBackground {
+  visibility: hidden;
+}
+
+/* Label for Dark/Light Mode */
+.labelBackground {
+  background-color: darkgrey;
+  width: 40px;
+  height: 20px;
+  border-radius: .5em;
+  cursor: pointer;
+  display: inline-block;
+}
+
+/* If Dark/Ligh Mode toggled then orange */
+.toggleBackground:checked + .labelBackground {
+  background-color: orange;
+}
+
+/* Dark/Light Mode slider */
+.backgroundSwitch {
+  background-color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: .5em;
+  position: absoulte;
+  animation: slideOff 0.3s linear forwards;
+}
+
+/* Dark/Light Mode slider Text */
+.backgroundSwitch p {
+  position: absolute;
+  margin: auto;
+  margin-top: 2px;
+  margin-left: 4px;
+}
+
+/* Dark/Light Mode selected then switch sides using animation */
+.toggleBackground:checked + .labelBackground .backgroundSwitch {
+  animation: slideOn 0.3s linear forwards;
+}
+
+/* Title Bar Container */
+.title {
+  align-items: flex-start;
+  display: flex;                
+  justify-content: center;       
+  padding-top: 10px;           
+}
+
+/* Title Bar Text */
+.title h1 {
+  font-size: 80px;
+  color: white;
+  font-weight: bold;
+  display: inline-block;
+  letter-spacing: 30px;
+}
+
+/* Title Bar Text Highlight */
+.blueHighlight {
+   text-shadow: 0 0 10px lightblue,  
+                0 0 0px  lightblue,  
+                0 0 10px lightblue;  
+}
+
+/* Container for circular boxes */
+.circularBoxes {
+  display: flex;                     
+  justify-content: center;           
+  text-align: center;
+  gap: 50px;                       
+}
+
+/* Individual circular boxes */
+.circularBoxOne, .circularBoxTwo {
+  display: flex;                     
+  flex-direction: column;            
+  justify-content: center;           
+  align-items: center;               
+  width: 300px;
+  height: 300px;
+  background-color: white;           
+  border-radius: 50%;                
+  color: white;
+  font-weight: bold;
+  opacity: .2;
+  box-shadow: 0 0 50px currentColor, 
+              0 0 0px  currentColor, 
+              0 0 10px currentColor; 
+  padding: 10px;                     
+  box-sizing: border-box;            
+}
+
+/* Circle One --> Sensor One Highlight */
+.circularBoxOne {
+  box-shadow: 0 0 50px blue, 
+              0 0 10px blue;
+}
+
+/* Circle Two --> Sensor Two Highlight */
+.circularBoxTwo {
+  box-shadow: 0 0 50px orange, 
+              0 0 10px orange;
+}
+
+/* Circle Box Headers */
+.circularBoxOne h1, .circularBoxTwo h1 {
+  display: flex;
+  color: black;
+  font-size: 40px;
+  margin: 0;                       
+  margin-bottom: 50px;
+}
+
+/* Circle Box Data Values */
+.circularBoxOne p, .circularBoxTwo p {
+  display: flex;
+  text-align: center;
+  color: black;
+  font-size: 70px;
+  margin: 0;                         
+  max-width: 90%;                   
+  margin-bottom: 70px;
+}
+
+
+/* Set all Button to these default values */
+button {
+  background-color: white;
+  opacity: .2;
+  border: .5px solid currentColor;
+  color: grey;
+  border-radius: .5em;
+  cursor: pointer;
+  font-size: inherit;
+  line-height: 1em;
+  padding: 0.25em .75em;
+  max-width: 20ch;
+  font-weight: bold;
+  font-size: 15px;
+}
+
+/* Hover action for all buttons */
+button:hover {
+  color: black;
+  border: 1px solid grey;
+  background-color: grey;
+}
+
+/* Connection Buttons */
+.connectButtons {
+  display: flex;
+  text-align: center;
+  justify-content: center;
+  margin: 30px;
+  gap: 250px;
+  
+}
+
+/* C or F Buttons */
+.degreeType {
+  display: flex;
+  text-align: center;
+  justify-content: center;
+  margin: 20px 20px 20px 20px;
+  gap: 310px;
+}
+
+/* Container for all Thresholds/Settings Boxes */
+.smsWrapper {
+  display: flex;
+  justify-content: center;
+  margin: 0;
+}
+
+/* Box for Settings */
+.smsSettings {
+  background-color: black;
+  opacity: .4;
+  border-radius: .5em;  
+  width: 400px;
+  height: 150px;
+  margin: auto;               
+}
+
+/* Coontaner for Sensor One/Two Threshold Boxes */
+.sms {
+  background-color: black;
+  opacity: .4;
+  border-radius: .5em;  
+  width: 400px;
+  height: 300px;
+  margin: auto;              
+}
+
+/* Settings Header */
+.smsSettings h1 {
+  color: white;
+  font-size: 20px;
+  text-align: center;         
+}
+
+/* Settings Input Label */
+.smsSettings label {
+  display: flex;
+  color: white;
+  font-weight: bold;  
+  margin-right: 10px;
+  margin-left: 10px;
+}
+
+/* Thresholds Header */
+.sms h1 {
+  color: white;
+  font-size: 20px;
+  text-align: center;         
+}
+
+/* Threshold Input Label */
+.sms label {
+  display: flex;
+  color: white;
+  font-weight: bold;  
+  margin-right: 10px;
+  margin-left: 10px;
+}
+
+/* Settings Input */
+.emailHub {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 30px;
+  
+}
+
+/* Settings Submit Button */
+.emailHub button {
+  display: block;
+  background-color: black;
+  opacity: 1;
+  border: none;
+  color: white;
+  border-radius: .5em;
+  cursor: pointer;
+  font-size: inherit;
+  line-height: 1em;
+  width: auto;
+  margin-right: 10px;
+}
+
+/* Max/Min Message for Both Sensors */
+.sendMessages button {
+  display: block;
+  background-color: black;
+  opacity: 1;
+  border: none;
+  color: white;
+  border-radius: .5em;
+  cursor: pointer;
+  font-size: inherit;
+  line-height: 1em;
+  width: auto;
+}
+
+/* Max/Min arrows buttons for Both Sensors */
+.maxTemp button, .minTemp button {
+  background-color: black;
+  border: none;
+  opacity: 1;
+  color: white;
+  border-radius: .5em;
+  cursor: pointer;
+  font-size: inherit;
+  line-height: 1em;
+}
+
+/* Max/Min Submit arrows hover for Both Sensors */
+.maxTemp button:hover, .minTemp button:hover {
+  background-color: white;
+  border: none;
+  opacity: 1;
+  color: black;
+  border-radius: .5em;
+  cursor: pointer;
+  font-size: inherit;
+  line-height: 1em;
+}
+
+/* Setting Input */
+.emailHub input {
+  display: flex;
+  background-color: white;
+  border: 1px solid currentColor;
+  border-radius: .5em;
+  cursor: pointer;
+  font-size: inherit;
+  line-height: 1em;
+  padding: 0.25em .75em;
+  max-width: 300px;
+  margin-right: 10px/
+}
+
+/* Setting Submit button hover */
+.emailHub button:hover {
+  background-color: white;
+  opacity: 1;
+  color: black;
+}
+
+/* Max/Min Submit buttons hover for Both Sensors */
+.sendMessages button:hover {
+  background-color: white;
+  opacity: 1;
+  color: black;
+}
+
+/* Thresholds All Secondary/Tertiary Titles */
+.sms p {
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  text-decoration: underline;
+}
+
+/* Thresholds Secondary Min/Max Title */
+.temps {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 125px;
+}
+
+/* Thresholds Max/Min Buttons and Output */
+.tempCaser {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Thresholds Min Container */
+.minTemp {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Thresholds Min text */
+.minTemp p {
+  text-decoration: none;
+}
+
+/* Thresholds Max Container */
+.maxTemp {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Thresholds Max text */
+.maxTemp p {
+  text-decoration: none;
+}
+
+/* Thresholds Messages Min/Max */
+.messages{ 
+  display: block;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Thresholds Messages Min/Max Tiertiary Titles */
+.oneMinMessage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 90px;
+}
+
+/* Thresholds Text Area container */
+.messageText{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 50px;
+}
+
+/* Thresholds Text Area */
+.messageText textarea {
+  width: 150px;
+  height: 60px;
+  resize: none;
+  overflow: auto;
+  border-radius: .5em;
+  background-color: white;
+  color: black;
+  font-style: bold;
+}
+
+/* Thresholds Text Area Submit Buttons */
+.sendMessages {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 3px;
+  gap: 135px;
+}
+
+/* Chart Toggle Button */
+.chartButton {
+  display: flex;
+  justify-content: right;
+  align-items: right;
+  margin-top: 20px;
+  margin-right: 30px;
+}
+
+/* Chart Toggle */
+.toggle {
+  opacity: 0;
+  position:absolute;
+  z-index: 1;
+}
+
+/* Chart Button Label */
+.labelChart {
+  background-color: darkgrey;
+  width: 40px;
+  height: 20px;
+  border-radius: .5em;
+  cursor: pointer;
+  display: inline-block;
+}
+
+/* Chart Button Label Toggled */
+.toggle:checked + .labelChart {
+  background-color: orange;
+}
+
+/* Chart Button Slider */
+.chartSwitch {
+  background-color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: .5em;
+  position: absolute;
+  animation: slideOff 0.3s linear forwards;
+}
+
+/* Chart Button Slider Text */
+.chartSwitch p {
+  position: absolute;
+  margin: auto;
+  margin-top: 2px;
+  margin-left: 4px;
+}
+
+/* Chart Button Slider toggled back */
+.toggle:checked + .labelChart .chartSwitch {
+  animation: slideOn 0.3s linear forwards;
+}
+
+/* Slide Label Left to Right */
+@keyframes slideOn {
+  0% {
+    transform: translateX(0) scale(1);
+  }
+  50% {
+    transform: translateX(10px) scale(1);
+  }
+  100% {
+    transform: translateX(20px) scale(1);
+  }
+}
+
+/* Slide Label Right to Left */
+@keyframes slideOff {
+  0% {
+    transform: translateX(20px) scale(1);
+  }
+  50% {
+    transform: translateX(10px) scale(1);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+  }
+}
